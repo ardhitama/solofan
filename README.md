@@ -50,7 +50,7 @@ On first launch, the app will prompt you to install a helper tool. This is a **o
 curl -fsSL https://raw.githubusercontent.com/mohamadlounnas/ffan/main/scripts/install.sh | bash
 ```
 
-This script downloads the latest version, installs SoloFan, sets up the helper tool, and launches the app automatically.
+This script downloads the latest version, verifies its signature, installs SoloFan, and launches it. Click "Install Helper" in the app to enable fan control.
 
 ### Demo Mode
 

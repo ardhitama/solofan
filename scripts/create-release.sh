@@ -48,21 +48,15 @@ curl -L https://github.com/${REPO}/releases/download/${TAG}/ffan-v${VERSION}-mac
 unzip ffan.zip
 mv ffan.app /Applications/
 rm ffan.zip
-
-# Install SMC helper for fan control
-cd /Applications/ffan.app/Contents/Resources/tools/smc-helper
-sudo ./install.sh
 ```
+
+Then launch the app and click **Install Helper** to enable fan control.
 
 #### Method 2: Manual Install
 1. Download **ffan-v${VERSION}-macos.zip** or **ffan-v${VERSION}-macos.dmg**
 2. Unzip/Mount and move `ffan.app` to `/Applications`
 3. **First launch**: Right-click → Open (to bypass Gatekeeper)
-4. **Enable fan control**: 
-   ```bash
-   cd /Applications/ffan.app/Contents/Resources/tools/smc-helper
-   sudo ./install.sh
-   ```
+4. **Enable fan control**: launch the app and click **Install Helper**
 
 ### 📋 Requirements
 - macOS 11.0 (Big Sur) or later

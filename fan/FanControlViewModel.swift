@@ -370,7 +370,7 @@ class FanControlViewModel: ObservableObject {
     
     func requestPermissions() {
         // Permissions are handled via smc-helper installation
-        // The helper should already be installed via install.sh
+        // The helper is installed from the app's "Install Helper" prompt
         PermissionsManager.shared.checkInstallation()
     }
     

@@ -21,28 +21,28 @@ fi
 VERSION="${LATEST_TAG#v}"
 ARCHIVE="solofan-v${VERSION}-macos.zip"
 
+# Private temp dir: fixed names in shared /tmp can be pre-planted by other users.
+WORK_DIR=$(mktemp -d)
+trap 'rm -rf "$WORK_DIR"' EXIT
+
 echo "📥 Downloading SoloFan ${LATEST_TAG}..."
-curl -L "https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ARCHIVE}" -o "/tmp/${ARCHIVE}"
+curl -fL "https://github.com/${REPO}/releases/download/${LATEST_TAG}/${ARCHIVE}" -o "${WORK_DIR}/${ARCHIVE}"
 
 echo "📦 Extracting..."
-cd /tmp
-unzip -q "${ARCHIVE}"
+unzip -q "${WORK_DIR}/${ARCHIVE}" -d "$WORK_DIR"
+
+echo "🔏 Verifying signature..."
+# curl downloads carry no quarantine flag, so Gatekeeper would never check this
+# app on launch. Require a valid Developer ID signature and notarization here.
+spctl --assess --type execute "${WORK_DIR}/${APP_NAME}.app"
 
 echo "🔄 Installing to /Applications..."
 rm -rf "/Applications/${APP_NAME}.app"
-mv "${APP_NAME}.app" /Applications/
-
-echo "🔧 Installing helper tool (requires password)..."
-sudo cp "/Applications/${APP_NAME}.app/Contents/Resources/smc-helper" /usr/local/bin/
-sudo chown root:wheel /usr/local/bin/smc-helper
-sudo chmod 4755 /usr/local/bin/smc-helper
-
-echo "🧹 Cleaning up..."
-rm "/tmp/${ARCHIVE}"
+mv "${WORK_DIR}/${APP_NAME}.app" /Applications/
 
 echo ""
 echo "✅ Installation complete!"
-echo "🚀 Launching SoloFan..."
+echo "🚀 Launching SoloFan... click \"Install Helper\" in the app to enable fan control."
 echo ""
 
 open "/Applications/${APP_NAME}.app"

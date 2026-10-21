@@ -2,6 +2,16 @@
 
 All notable changes to SoloFan will be documented in this file.
 
+## [Unreleased]
+
+### Security
+- **Helper built from source**: The app bundled a prebuilt `smc-helper` from January that predated the hardening and still accepted arbitrary `write <KEY> <HEX>` SMC writes as root through the passwordless sudo rule. Xcode now compiles `tools/smc-helper/smc.c` on every build; the committed `smc-helper` / `smc-write` binaries are removed.
+- **Helper source compiles again**: Restored a missing brace in `validFan` that broke `smc.c`.
+- **Speed floor**: The helper clamps targets to the fan's `F{n}Mn` minimum instead of allowing 0 RPM.
+- **Root-owned install path**: The helper installs to `/Library/PrivilegedHelperTools/solofan-smc-helper`. The `sudoers` rule trusted `/usr/local/bin/smc-helper` by path, and that directory is user-writable on many Intel Macs. Installing removes the old helper and repoints the rule.
+- **Installer quoting**: The app path is shell-quoted in the root install script, and the `sudoers` rule is validated with `visudo` before it is installed.
+- **No setuid installs**: `scripts/install.sh` no longer installs a setuid-root helper, uses a private temp directory, and checks the app's signature with `spctl`. `tools/smc-helper/install.sh` is removed.
+
 ## [1.6.6] - 2026-07-16
 
 ### Fixed

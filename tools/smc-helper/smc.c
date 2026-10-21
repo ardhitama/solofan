@@ -249,6 +249,7 @@ static int validFan(int fanNum, io_connect_t conn)
     if (n <= 0)
         return fanNum < 8; // SMC count unreadable: allow only a small sane range
     return fanNum < n && fanNum < 10;
+}
 
 float getFanSpeed(int fanNum, io_connect_t conn)
 {
@@ -445,12 +446,18 @@ kern_return_t setFanSpeed(int fanNum, int speed, io_connect_t conn)
     char key[8];
 
     // Clamp to the fan's own reported envelope so a bad caller can't push a
-    // nonsense target through the root helper. F{n}Mx is the hardware ceiling.
-    if (speed < 0)
-        speed = 0;
+    // nonsense target through the root helper. F{n}Mn/F{n}Mx are the hardware
+    // floor and ceiling. The floor matters most: manual mode may also suppress
+    // thermalmonitord (Ftst), so a 0 RPM target would leave the fan stopped.
+    // Fallbacks match the app's FanRPMBounds when a key is unreadable.
+    float fmin = getFanMinSpeed(fanNum, conn);
     float fmax = getFanMaxSpeed(fanNum, conn);
-    if (fmax > 0 && speed > (int)fmax)
-        speed = (int)fmax;
+    int floorRPM = fmin > 0 ? (int)fmin : 1000;
+    int ceilingRPM = fmax > 0 ? (int)fmax : 8000;
+    if (speed < floorRPM)
+        speed = floorRPM;
+    if (speed > ceilingRPM)
+        speed = ceilingRPM;
 
     // Take manual control. Direct mode=1 works from AUTO; if the firmware holds
     // SYSTEM mode (0x82) it falls back to the Ftst force-test unlock.

@@ -16,8 +16,13 @@ class PermissionsManager: ObservableObject {
     
     @Published var isHelperInstalled = false
     
-    private let helperPath = "/usr/local/bin/smc-helper"
-    private let sudoersPath = "/etc/sudoers.d/smc-fan-helper"
+    /// sudoers grants passwordless root to whatever file sits at this path, so
+    /// every directory on it must be writable only by root. /usr/local/bin is
+    /// not safe for this: Homebrew makes it user-writable on Intel Macs.
+    nonisolated static let helperPath = "/Library/PrivilegedHelperTools/solofan-smc-helper"
+    /// Earlier releases installed here (setuid root via scripts/install.sh).
+    nonisolated private static let legacyHelperPath = "/usr/local/bin/smc-helper"
+    nonisolated private static let sudoersPath = "/etc/sudoers.d/smc-fan-helper"
     
     private init() {
         checkInstallation()
@@ -29,7 +34,7 @@ class PermissionsManager: ObservableObject {
             guard let self = self else { return }
             
             let fileManager = FileManager.default
-            let helperExists = fileManager.fileExists(atPath: self.helperPath)
+            let helperExists = fileManager.fileExists(atPath: Self.helperPath)
             
             if !helperExists {
                 DispatchQueue.main.async { self.isHelperInstalled = false }
@@ -47,7 +52,7 @@ class PermissionsManager: ObservableObject {
     private func verifySudoAccess() -> Bool {
         // This check can fail from sandboxed GUI apps even when sudoers is correct
         // So we just check if helper binary exists and trust the installation
-        return FileManager.default.fileExists(atPath: helperPath)
+        return FileManager.default.fileExists(atPath: Self.helperPath)
     }
     
     func installHelper(completion: @escaping (Bool, String?) -> Void) {
@@ -57,13 +62,9 @@ class PermissionsManager: ObservableObject {
             return
         }
         
-        let bundledPath = bundledHelperURL.path
-        
         // 2. Construct the installation script
-        // We handle everything in one sudo shell script for atomicity
-        let script = """
-        do shell script "mkdir -p /usr/local/bin && cp -f '\(bundledPath)' '\(helperPath)' && chown root:wheel '\(helperPath)' && chmod 755 '\(helperPath)' && mkdir -p /etc/sudoers.d && echo '%admin ALL=(root) NOPASSWD: \(helperPath)' > '\(sudoersPath)' && chmod 440 '\(sudoersPath)' && chown root:wheel '\(sudoersPath)'" with administrator privileges
-        """
+        // We handle everything in one root shell script behind a single prompt.
+        let script = Self.administratorScript(Self.installCommand(bundledHelperPath: bundledHelperURL.path))
         
         // 3. Execute
         DispatchQueue.global(qos: .userInitiated).async {
@@ -86,5 +87,43 @@ class PermissionsManager: ObservableObject {
                  }
              }
         }
+    }
+    
+    /// Root shell script that installs the bundled helper, points the sudoers
+    /// rule at it, and removes the legacy /usr/local/bin helper.
+    nonisolated static func installCommand(bundledHelperPath: String) -> String {
+        // Every interpolated value is shell-quoted: the bundle path is
+        // user-controlled (the app can live anywhere) and runs as root here.
+        let helper = shellQuoted(helperPath)
+        let rule = shellQuoted("%admin ALL=(root) NOPASSWD: \(helperPath)")
+        return [
+            "set -e",
+            "mkdir -p \(shellQuoted((helperPath as NSString).deletingLastPathComponent))",
+            "install -o root -g wheel -m 755 \(shellQuoted(bundledHelperPath)) \(helper)",
+            // Validate the rule before it goes live: a malformed file in
+            // sudoers.d breaks sudo for the whole system.
+            "rule=$(mktemp)",
+            "trap 'rm -f \"$rule\"' EXIT",
+            "printf '%s\\n' \(rule) > \"$rule\"",
+            "visudo -c -q -f \"$rule\"",
+            "mkdir -p /etc/sudoers.d",
+            "install -o root -g wheel -m 440 \"$rule\" \(shellQuoted(sudoersPath))",
+            "rm -f \(shellQuoted(legacyHelperPath))",
+        ].joined(separator: "\n")
+    }
+    
+    /// Single-quotes `value` for /bin/sh so it stays one literal word, even if
+    /// it contains spaces, quotes, or `$`.
+    nonisolated static func shellQuoted(_ value: String) -> String {
+        "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'"
+    }
+    
+    /// AppleScript source that runs `command` with /bin/sh as root after an
+    /// admin password prompt.
+    nonisolated static func administratorScript(_ command: String) -> String {
+        let literal = command
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return "do shell script \"\(literal)\" with administrator privileges"
     }
 }

@@ -55,6 +55,7 @@
 				D127C6DE2F14343F00456D59 /* Sources */,
 				D127C6DF2F14343F00456D59 /* Frameworks */,
 				D127C6E02F14343F00456D59 /* Resources */,
+				0036A115B95C4D739523D6E9 /* Build smc-helper */,
 			);
 			buildRules = (
 			);
@@ -113,6 +114,30 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0036A115B95C4D739523D6E9 /* Build smc-helper */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/tools/smc-helper/smc.c",
+				"$(SRCROOT)/tools/smc-helper/smc.h",
+			);
+			name = "Build smc-helper";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/smc-helper",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "# Build the privileged helper from source on every build so the bundled binary\n# always matches tools/smc-helper/smc.c. CI builds with signing disabled and\n# signs the helper itself before notarization.\nset -euo pipefail\narch_flags=()\nfor arch in ${ARCHS}; do arch_flags+=(-arch \"$arch\"); done\nxcrun clang \"${arch_flags[@]}\" -mmacosx-version-min=\"${MACOSX_DEPLOYMENT_TARGET}\" -Wall -O2 -fstack-protector-strong -D_FORTIFY_SOURCE=2 -framework IOKit -framework CoreFoundation -o \"${SCRIPT_OUTPUT_FILE_0}\" \"${SCRIPT_INPUT_FILE_0}\"\nif [ \"${CODE_SIGNING_ALLOWED}\" = \"YES\" ] && [ -n \"${EXPANDED_CODE_SIGN_IDENTITY:-}\" ]; then\n  codesign --force --options runtime --timestamp=none --sign \"${EXPANDED_CODE_SIGN_IDENTITY}\" \"${SCRIPT_OUTPUT_FILE_0}\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		D127C6DE2F14343F00456D59 /* Sources */ = {

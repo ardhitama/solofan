@@ -26,11 +26,7 @@ curl -L https://github.com/USERNAME/ffan/releases/download/v1.0.0/ffan-v1.0.0-ma
 unzip ffan.zip && mv ffan.app /Applications/ && rm ffan.zip
 ```
 
-**Enable Fan Control:**
-```bash
-cd /Applications/ffan.app/Contents/Resources/tools/smc-helper
-sudo ./install.sh
-```
+**Enable Fan Control:** launch the app and click **Install Helper** (asks for your admin password once).
 
 ### 📥 Downloads
 

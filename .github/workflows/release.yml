@@ -91,12 +91,9 @@ jobs:
           set -euo pipefail
           chmod +x release/SoloFan.app/Contents/MacOS/*
 
-          # Nested helpers must be signed before the app bundle (inside-out).
-          for bin in release/SoloFan.app/Contents/Resources/smc-helper release/SoloFan.app/Contents/Resources/smc-write; do
-            if [ -f "$bin" ]; then
-              codesign --force --options runtime --timestamp --sign "$CODESIGN_IDENTITY" "$bin"
-            fi
-          done
+          # The nested helper (built from tools/smc-helper/smc.c by the Xcode
+          # build) must be signed before the app bundle (inside-out).
+          codesign --force --options runtime --timestamp --sign "$CODESIGN_IDENTITY" release/SoloFan.app/Contents/Resources/smc-helper
 
           codesign --force --deep --options runtime --timestamp --sign "$CODESIGN_IDENTITY" release/SoloFan.app
           codesign --verify --deep --strict --verbose=2 release/SoloFan.app

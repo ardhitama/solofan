@@ -195,7 +195,7 @@ struct PopoverView: View {
             .padding(.top, 8)
             .padding(.horizontal, 40)
 
-            Text("Helper is installed to /usr/local/bin")
+            Text("Helper is installed to /Library/PrivilegedHelperTools")
                 .font(.system(size: 9))
                 .foregroundColor(.secondary.opacity(0.5))
         }

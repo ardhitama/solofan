@@ -101,13 +101,7 @@ xcodebuild -project fan.xcodeproj -scheme fan -configuration Release
 ```
 
 #### Installing SMC Helper (Required for Fan Control)
-```bash
-cd tools/smc-helper
-make
-sudo ./install.sh
-```
-
-This installs the `smc-helper` binary with setuid permissions to `/usr/local/bin/`, allowing fan control without repeated password prompts.
+The Xcode build compiles `tools/smc-helper/smc.c` into the app bundle. Launch the app and click **Install Helper**: after one admin password prompt it installs the helper root-owned at `/Library/PrivilegedHelperTools/solofan-smc-helper` and adds a `sudoers.d` rule so admin users can run it without repeated password prompts.
 
 ---
 
@@ -122,11 +116,7 @@ This installs the `smc-helper` binary with setuid permissions to `/usr/local/bin
 ### Enabling Fan Control
 
 #### Method 1: Using SMC Helper (Recommended)
-```bash
-# Install once (requires admin password)
-cd tools/smc-helper
-sudo ./install.sh
-```
+Click **Install Helper** in the app once (requires admin password).
 
 After installation, fan control will work seamlessly within the app.
 
@@ -185,15 +175,13 @@ fan/
 ├── ViewModels/
 │   └── FanControlViewModel.swift  # Main app state & business logic
 └── Resources/
-    ├── smc-helper             # Setuid helper for SMC writes
     └── smc-write.swift        # Alternative Swift implementation
 
 tools/
 ├── smc-helper/
 │   ├── smc.c                  # Low-level SMC C implementation
 │   ├── smc.h                  # SMC definitions and structures
-│   ├── Makefile               # Build configuration
-│   └── install.sh             # Installation script
+│   └── Makefile               # Local test build (the app build compiles smc.c itself)
 └── smc-write/
     └── Sources/               # Swift-based SMC writer
 ```
@@ -270,15 +258,15 @@ macOS kernel restricts SMC write operations to protect against:
 - Hardware instability from invalid commands
 - Malicious software manipulating system thermals
 
-**ffan's solution**: A small setuid helper binary (`smc-helper`) that validates and executes only safe fan control commands.
+**ffan's solution**: A small root helper (`smc-helper`) that accepts only fan commands (`info`, `set`, `auto`), bounds fan indices, and clamps speeds to each fan's hardware min/max.
 
 ---
 
 ## 🛡️ Security Considerations
 
-### Setuid Binary
-- **Location**: `/usr/local/bin/smc-helper`
-- **Permissions**: `4755` (setuid root)
+### Privileged Helper
+- **Location**: `/Library/PrivilegedHelperTools/solofan-smc-helper` (root-owned path, so it cannot be swapped by a non-root process)
+- **Permissions**: `0755` root:wheel, run through a `NOPASSWD` rule in `/etc/sudoers.d/smc-fan-helper` for the `admin` group
 - **Validation**: Helper validates all inputs before SMC writes
 - **Scope**: Limited to fan control operations only
 

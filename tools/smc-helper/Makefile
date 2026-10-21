@@ -10,7 +10,6 @@ $(TARGET): smc.c smc.h
 clean:
 	rm -f $(TARGET)
 
-install: $(TARGET)
-	cp $(TARGET) ../../fan/Resources/
-
-.PHONY: all clean install
+# `make` builds smc-helper here for local testing only; the app bundles the
+# copy built by the Xcode "Build smc-helper" phase.
+.PHONY: all clean

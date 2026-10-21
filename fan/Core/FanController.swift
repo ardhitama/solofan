@@ -41,7 +41,7 @@ class FanController: ObservableObject {
     private let applyQueue = DispatchQueue(label: "com.solofan.fan-apply", qos: .userInitiated)
 
     private var smcHelperPath: String {
-        "/usr/local/bin/smc-helper"
+        PermissionsManager.helperPath
     }
 
     init(systemMonitor: SystemMonitor) {
@@ -397,9 +397,8 @@ class FanController: ObservableObject {
         }
 
         print("Fan Control: sudo -n unauthorized. Falling back to AppleScript.")
-        let argsString = args.joined(separator: " ")
-        let fullCommand = "'\(helperPath)' \(argsString)"
-        let scriptSource = "do shell script \"\(fullCommand)\" with administrator privileges"
+        let fullCommand = ([helperPath] + args).map(PermissionsManager.shellQuoted).joined(separator: " ")
+        let scriptSource = PermissionsManager.administratorScript(fullCommand)
 
         // NSAppleScript drives Apple Events and must run on the main thread; this
         // path is normally reached from applyQueue (off-main), so hop to main.
