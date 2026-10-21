@@ -412,6 +412,16 @@ kern_return_t unlockFanManual(int fanNum, io_connect_t conn)
             if (readFanModeRaw(fanNum, conn) == 1)
                 return kIOReturnSuccess;
         }
+
+        // The unlock failed. Drop the Ftst we raised so thermalmonitord keeps
+        // full control, unless another fan is manual and still relies on it.
+        int fans = getFanCount(conn);
+        int otherManual = 0;
+        for (int i = 0; i < fans && i < 10; i++)
+            if (i != fanNum && readFanModeRaw(i, conn) == 1)
+                otherManual = 1;
+        if (!otherManual)
+            writeFtst(0, conn);
     }
 
     return kIOReturnError;
