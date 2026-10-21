@@ -28,7 +28,7 @@ struct PopoverView: View {
 
             ScrollView {
                 VStack(spacing: 14) {
-                    if !permissions.isHelperInstalled {
+                    if !permissions.isHelperInstalled || permissions.isHelperOutdated {
                         installHelperView
                     } else if !viewModel.hasAccess {
                         noAccessView
@@ -163,10 +163,12 @@ struct PopoverView: View {
                 .font(.system(size: 32))
                 .foregroundColor(.blue)
 
-            Text("Helper Tool Required")
+            Text(permissions.isHelperOutdated ? "Helper Update Required" : "Helper Tool Required")
                 .font(.system(size: 14, weight: .semibold))
 
-            Text("To control fans without constant password prompts, a helper tool must be installed.")
+            Text(permissions.isHelperOutdated
+                 ? "This version of SoloFan includes an updated helper tool. Update it to keep fan control working with the latest fixes."
+                 : "To control fans without constant password prompts, a helper tool must be installed.")
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -187,7 +189,7 @@ struct PopoverView: View {
                     }
                 }
             } label: {
-                Text("Install Helper")
+                Text(permissions.isHelperOutdated ? "Update Helper" : "Install Helper")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)

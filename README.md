@@ -44,6 +44,7 @@ On first launch, the app will prompt you to install a helper tool. This is a **o
 - Click "Install Helper" in the app
 - Enter your admin password once
 - The helper tool enables fan control without repeated password prompts
+- After an app update that ships a changed helper, the app asks you to click "Update Helper" (one password prompt)
 
 **Alternative:** Automated installation via Terminal
 ```bash

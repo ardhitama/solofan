@@ -15,6 +15,8 @@ class PermissionsManager: ObservableObject {
     static let shared = PermissionsManager()
     
     @Published var isHelperInstalled = false
+    /// The installed helper differs from the one bundled with this app.
+    @Published var isHelperOutdated = false
     
     /// sudoers grants passwordless root to whatever file sits at this path, so
     /// every directory on it must be writable only by root. /usr/local/bin is
@@ -37,14 +39,21 @@ class PermissionsManager: ObservableObject {
             let helperExists = fileManager.fileExists(atPath: Self.helperPath)
             
             if !helperExists {
-                DispatchQueue.main.async { self.isHelperInstalled = false }
+                DispatchQueue.main.async {
+                    self.isHelperInstalled = false
+                    self.isHelperOutdated = false
+                }
                 return
             }
+            
+            let bundledPath = Bundle.main.url(forResource: "smc-helper", withExtension: nil)?.path
+            let outdated = Self.helperNeedsUpdate(installedPath: Self.helperPath, bundledPath: bundledPath)
             
             // If helper exists, assume it's installed (sudoers verification can be flaky from GUI apps)
             // The actual passwordless sudo will be tested when FanController runs
             DispatchQueue.main.async {
                 self.isHelperInstalled = true
+                self.isHelperOutdated = outdated
             }
         }
     }
@@ -87,6 +96,14 @@ class PermissionsManager: ObservableObject {
                  }
              }
         }
+    }
+    
+    /// Whether the root-owned helper differs from the copy bundled with this
+    /// app. An app update can ship a fixed helper, but the installed copy only
+    /// changes when the user reinstalls it, so any difference asks for an update.
+    nonisolated static func helperNeedsUpdate(installedPath: String, bundledPath: String?) -> Bool {
+        guard let bundledPath else { return false }
+        return !FileManager.default.contentsEqual(atPath: installedPath, andPath: bundledPath)
     }
     
     /// Root shell script that installs the bundled helper, points the sudoers
