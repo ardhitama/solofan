@@ -100,10 +100,25 @@ class PermissionsManager: ObservableObject {
     
     /// Whether the root-owned helper differs from the copy bundled with this
     /// app. An app update can ship a fixed helper, but the installed copy only
-    /// changes when the user reinstalls it, so any difference asks for an update.
+    /// changes when the user reinstalls it, so a difference asks for an update.
     nonisolated static func helperNeedsUpdate(installedPath: String, bundledPath: String?) -> Bool {
-        guard let bundledPath else { return false }
-        return !FileManager.default.contentsEqual(atPath: installedPath, andPath: bundledPath)
+        // Never prompt to install a bundled helper whose signature is broken.
+        guard let bundledPath, let bundledHash = codeHash(atPath: bundledPath) else { return false }
+        // A missing, unsigned, or tampered installed helper has no hash: repair it.
+        return codeHash(atPath: installedPath) != bundledHash
+    }
+    
+    /// CDHash of validly signed code at `path`, or nil. It covers the code and
+    /// signing identity but not the signing time, so re-signing an unchanged
+    /// helper for each release does not trigger an update prompt.
+    nonisolated static func codeHash(atPath path: String) -> Data? {
+        var code: SecStaticCode?
+        guard SecStaticCodeCreateWithPath(URL(fileURLWithPath: path) as CFURL, [], &code) == errSecSuccess,
+              let code,
+              SecStaticCodeCheckValidity(code, [], nil) == errSecSuccess else { return nil }
+        var info: CFDictionary?
+        guard SecCodeCopySigningInformation(code, [], &info) == errSecSuccess else { return nil }
+        return (info as? [String: Any])?[kSecCodeInfoUnique as String] as? Data
     }
     
     /// Root shell script that installs the bundled helper, points the sudoers
