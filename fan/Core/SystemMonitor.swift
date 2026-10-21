@@ -114,6 +114,11 @@ class SystemMonitor: ObservableObject {
     private var monitoringTimer: Timer?
     private let monitoringInterval: TimeInterval = 2.0
     private var keyInfoCache: [UInt32: SMCKeyData_keyInfo_t] = [:]
+    /// Serializes all SMC reads and the state they mutate (`keyInfoCache`,
+    /// `lastGPUTemp`). Running detectFans() on the caller's thread while
+    /// updateReadings() filled the cache on a global queue raced on the
+    /// Dictionary and crashed the app at launch.
+    private let smcQueue = DispatchQueue(label: "com.solofan.smc-read", qos: .userInitiated)
     
     // Intel CPU/GPU proximity keys (legacy Macs).
     private let cpuTempKeysIntel = ["TC0P", "TCXC", "TC0E", "TC0F", "TC0D", "TC1C", "TC2C", "TC3C", "TC4C"]
@@ -282,26 +287,29 @@ class SystemMonitor: ObservableObject {
     // MARK: - Fan Detection
     
     private func detectFans() {
-        var count = 0
-        for i in 0..<8 {
-            let key = String(format: "F%dAc", i)
-            if let _ = readSMCValue(key: key) {
-                count += 1
-            } else {
-                break
+        smcQueue.async { [weak self] in
+            guard let self = self else { return }
+            var count = 0
+            for i in 0..<8 {
+                let key = String(format: "F%dAc", i)
+                if let _ = self.readSMCValue(key: key) {
+                    count += 1
+                } else {
+                    break
+                }
             }
-        }
-        
-        DispatchQueue.main.async {
-            self.numberOfFans = count
-            print("SMC: Detected \(count) fan(s)")
+            
+            DispatchQueue.main.async {
+                self.numberOfFans = count
+                print("SMC: Detected \(count) fan(s)")
+            }
         }
     }
     
     // MARK: - Reading Updates
     
     private func updateReadings() {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+        smcQueue.async { [weak self] in
             guard let self = self else { return }
             
             // Read temperatures — hottest plausible die sensor, Apple Silicon

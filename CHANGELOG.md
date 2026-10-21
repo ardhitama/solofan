@@ -12,6 +12,9 @@ All notable changes to SoloFan will be documented in this file.
 - **Installer quoting**: The app path is shell-quoted in the root install script, and the `sudoers` rule is validated with `visudo` before it is installed.
 - **No setuid installs**: `scripts/install.sh` no longer installs a setuid-root helper, uses a private temp directory, and checks the app's signature with `spctl`. `tools/smc-helper/install.sh` is removed.
 
+### Fixed
+- **Launch crash**: SoloFan crashed on launch (`EXC_BAD_ACCESS` in `SystemMonitor.readSMCValue`) because fan detection and sensor polling wrote the SMC key-info cache from two threads at once. All SMC reads now run on one serial queue.
+
 ## [1.6.6] - 2026-07-16
 
 ### Fixed
